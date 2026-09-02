@@ -1,6 +1,6 @@
 # PPT Translator（发行版 / Releases）
 
-> 本仓库仅提供 **Windows 可执行程序** 下载，**不公开源码**。
+> 本仓库提供 **Windows 可执行程序** 下载。
 
 ## 下载 / Download
 
