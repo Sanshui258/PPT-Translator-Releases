@@ -6,7 +6,8 @@
 
 请前往页面顶部的 **Releases** 标签：
 
-- `v1.0.3` → `PPT_Translator_v1.0.3.zip`（最新）
+- `v1.0.4` → `PPT_Translator_v1.0.4.zip`（最新）
+- `v1.0.3` → `PPT_Translator_v1.0.3.zip`
 - `v1.0.2` → `PPT_Translator_v1.0.2.zip`
 - `v1.0.1` → `PPT_Translator_v1.0.1.zip`
 - `v1.0.0` → `PPT_Translator_v1.0.0.zip`
