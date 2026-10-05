@@ -1,4 +1,4 @@
-# PPT Translator User Guide (Official v1.1.1)
+# PPT Translator User Guide (Official v1.2.0)
 
 > Welcome to the **first official release of PPT Translator** — a local PPT / PDF AI translation tool.
 > It reads PPTX / PPT / PDF files, translates text (e.g. Korean / English) into Simplified Chinese (target language is configurable),
@@ -9,6 +9,39 @@
 > Please include the log output from the status window (or the newest `logs/` file) to help us diagnose.
 
 ---
+
+---
+
+## What's new in v1.2.0 (October release)
+
+- **Table translation (new)**: tables are no longer dropped as a whole
+  - tables are extracted cell by cell and filtering is per cell, so one cell that looks like code or
+    a formula can no longer discard the entire table;
+  - in Hybrid / Text mode the translation is written **back into the original table cells**: borders,
+    fills, merged cells and font styling stay exactly as they were - the result is the same table,
+    just in the target language;
+  - numbers and serial numbers are left untouched, and replaced originals are saved to slide notes.
+- **Layout keeps improving**: the background is estimated and removed first (gradients no longer
+  confuse it); candidates prefer the left/right of the original, then above/below, and the closest
+  non-overlapping blank block is picked by coordinate norm; box width now hugs the text; elements are
+  placed top-to-bottom, left-to-right.
+- **Installer**: a Windows setup (`PPT_Translator_Setup_v1.2.0.exe`) - no admin rights, per-user
+  install, bundled uninstaller. Upgrading keeps `.env` / `cache` / `reports` / `logs` / `input` /
+  `output` / `prompts`; when migrating from the portable ZIP the wizard can import your old folder
+  (API key, translation memory and history) in one step.
+- **Modern UI**: Windows 11 (Sun Valley) theme with system / light / dark switching.
+- **History window**: review every run (time / files / result / mode / output path) and browse, search
+  and export the translation memory.
+- **Font & style menu**: font / size / text colour / highlight colour, shared by Hybrid, Vision and
+  in-place replace; defaults follow the target language (EN -> SimHei, ZH -> SimSun, KO -> Malgun
+  Gothic) at 12 pt; size strategy `fixed` or `ratio` (original x 7/16); code boxes only get their
+  comments translated.
+- **API compatibility**: OpenAI and Anthropic Claude (Messages API), plus automatic provider detection
+  (Mindlogic campus gateway / DeepSeek / Zhipu GLM / Alibaba Qwen Bailian / Kimi) and any
+  OpenAI-compatible endpoint; Base URL paths are completed automatically and the model list is fetched.
+- **Other fixes**: output name conflict check (overwrite / rename / cancel), automatic archiving of
+  inputs into `translated/`, drag & drop, opening the output folder when finished, Hybrid no longer
+  forced into Vision by `VISION_MODE`, and the installer's import checkbox is now linked correctly.
 
 ## 1. What Is This & What It Does
 
@@ -101,9 +134,10 @@ Tip: the number next to the progress bar is `done/total`. You can press **Stop**
 - **Text** (advanced): processes only directly readable text boxes; suitable when a deck is confirmed to be text-based.
 
 ### 5.2 Originals untouched, translation placed nearby (default)
-Translations are added as new text boxes styled **SimHei (bold) · black · gold highlight (FFD700)**:
-- Font size adapts automatically: headings use original size × 7/16, with a **12 pt floor**, so text is never unreadably small;
-- Positions are chosen with HoG activity maps: below the original first, then above, then nearby blank blocks, and finally the largest empty area with auto-fitted size.
+Translations are added as new text boxes; the style is editable in the GUI "translation font" panel (font / size / color / highlight, shared by all modes):
+- Default font follows the target language (EN → SimHei, ZH → SimSun, KO → Malgun Gothic); default size is a unified **12 pt**;
+- Size policy `fixed` (default) / `ratio` (original × 7/16, floored); when text does not fit, the box grows first and only then shrinks;
+- Placement uses five candidates (right / left / below / above the original + the lowest-activity HoG blank block), drops crowded ones, then picks the nearest by coordinate norm in top-to-bottom, left-to-right order.
 
 ### 5.3 In-place replace (optional, Hybrid / Text modes)
 When enabled, the translation is **written back into the original text box** (keeping its original font size / color / layout), and the original text is saved into that slide's **notes (speaker notes)**. Useful when you want the Chinese text to simply replace the original in the same box. Tables are not supported yet — their text is kept as-is with a notice.
