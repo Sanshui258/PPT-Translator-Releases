@@ -12,36 +12,90 @@
 
 ---
 
-## What's new in v1.2.0 (October release)
+## What's new: everything since v1.1.1 (v1.2.0, October release)
 
-- **Table translation (new)**: tables are no longer dropped as a whole
-  - tables are extracted cell by cell and filtering is per cell, so one cell that looks like code or
-    a formula can no longer discard the entire table;
-  - in Hybrid / Text mode the translation is written **back into the original table cells**: borders,
-    fills, merged cells and font styling stay exactly as they were - the result is the same table,
-    just in the target language;
-  - numbers and serial numbers are left untouched, and replaced originals are saved to slide notes.
-- **Layout keeps improving**: the background is estimated and removed first (gradients no longer
-  confuse it); candidates prefer the left/right of the original, then above/below, and the closest
-  non-overlapping blank block is picked by coordinate norm; box width now hugs the text; elements are
-  placed top-to-bottom, left-to-right.
-- **Installer**: a Windows setup (`PPT_Translator_Setup_v1.2.0.exe`) - no admin rights, per-user
-  install, bundled uninstaller. Upgrading keeps `.env` / `cache` / `reports` / `logs` / `input` /
-  `output` / `prompts`; when migrating from the portable ZIP the wizard can import your old folder
-  (API key, translation memory and history) in one step.
-- **Modern UI**: Windows 11 (Sun Valley) theme with system / light / dark switching.
-- **History window**: review every run (time / files / result / mode / output path) and browse, search
-  and export the translation memory.
-- **Font & style menu**: font / size / text colour / highlight colour, shared by Hybrid, Vision and
-  in-place replace; defaults follow the target language (EN -> SimHei, ZH -> SimSun, KO -> Malgun
-  Gothic) at 12 pt; size strategy `fixed` or `ratio` (original x 7/16); code boxes only get their
-  comments translated.
-- **API compatibility**: OpenAI and Anthropic Claude (Messages API), plus automatic provider detection
-  (Mindlogic campus gateway / DeepSeek / Zhipu GLM / Alibaba Qwen Bailian / Kimi) and any
-  OpenAI-compatible endpoint; Base URL paths are completed automatically and the model list is fetched.
-- **Other fixes**: output name conflict check (overwrite / rename / cancel), automatic archiving of
-  inputs into `translated/`, drag & drop, opening the output folder when finished, Hybrid no longer
-  forced into Vision by `VISION_MODE`, and the installer's import checkbox is now linked correctly.
+### 1. Table translation (the big one)
+
+- **Tables are no longer dropped as a whole.** Filtering used to run single-line rules against the
+  whole table text, so one cell that looked like code or a formula (`x=1`) discarded the entire table.
+  Tables are now extracted one cell per entry and filtered per cell, so only genuine numbers /
+  serial numbers are skipped.
+- **The translation is written back into the original table cells** in Hybrid / Text mode instead of
+  creating floating text boxes: borders, fills, merged cells and font styling stay exactly as they
+  were - the result is the same table in the target language.
+- Cells that need no translation (numbers, serials) keep their original text, and replaced originals
+  are saved to the slide notes.
+- Table cells take part in AI proofreading like any other entry.
+
+### 2. Layout
+
+- **Two-stage background estimation**: the background is estimated and subtracted first (flat white,
+  gradients and large colour blocks no longer confuse it), then text / ink activity is measured on
+  what remains, so blank-block detection is far more reliable.
+- **Candidate order is "left/right of the original first, then above/below"**, and the closest
+  non-overlapping blank block is chosen by coordinate norm.
+- **Box width now hugs the text** (it used to inherit the original's full-page width, which pushed
+  every candidate off-slide and produced very long boxes).
+- **Reading order**: elements are placed top-to-bottom, left-to-right instead of piling up in a corner.
+- **Layout fine grid is selectable**: 1/6 coarse, 1/8 normal, **1/10 fine (default)**, 1/12 ultra
+  (`LAYOUT_FINE_DIV`).
+- **Box-width policy is configurable**: max 0.60 of the page, floor 0.25, and a 0.6x narrowing retry
+  when nothing fits (`LAYOUT_BOX_MAX_RATIO` / `LAYOUT_BOX_FLOOR_RATIO` / `LAYOUT_BOX_NARROW_RATIO`).
+- **Fixed**: all pages used to share one occupancy list, so every candidate collided with originals
+  from other slides and translations piled up at the bottom; occupancy is now computed per slide.
+
+### 3. Fonts & styling
+
+- **New font / style panel**: font, size, text colour and highlight colour, shared by the Hybrid,
+  Vision and in-place replace modes.
+- **Default font follows the target language**: English -> SimHei, Chinese -> SimSun, Korean -> Malgun
+  Gothic; default size is 12 pt.
+- **New size strategy**: `fixed` (one size for everything, default) or `ratio` (original x 7/16 with
+  the configured size as a floor).
+- **Code entries only get their comments translated**; code (keywords, names, paths, commands,
+  symbols, indentation, numbers) is preserved character for character - signalled to the model with a
+  `code` flag.
+
+### 4. API compatibility
+
+- **Anthropic Claude (Messages API)** support: `x-api-key` + `anthropic-version` headers and the
+  `/v1/messages` endpoint, auto-detected alongside the OpenAI dialect (`AI_API_DIALECT` can force either).
+- **OpenAI official API** rule added (`/v1/chat/completions`, falling back to `/responses` on 404).
+- **Provider rules expanded to eight**: Mindlogic (campus gateway) / DeepSeek / Zhipu GLM / Alibaba
+  Qwen Bailian / Kimi (Moonshot) / OpenAI / Anthropic / universal fallback. Base URLs are recognised
+  and normalised automatically (e.g. `/v1/gateway` is appended when needed).
+- **Model list fetching and connection testing**, with provider-specific advice for 401 / 403 / 404 / 429.
+- **Fixed**: Hybrid mode is no longer forced into Vision mode by `VISION_MODE` in `.env` (choosing
+  "Hybrid" used to run pure vision).
+
+### 5. Installer & packaging
+
+- **New Windows installer** (`PPT_Translator_Setup_v1.2.0.exe`): no admin rights, per-user install
+  under `%LOCALAPPDATA%\Programs\PPT Translator`, Start-menu / desktop shortcuts, bundled uninstaller.
+- **Upgrading keeps your data**: `.env` (API key / settings), `cache/` (translation memory),
+  `reports/` (incl. history), `logs/`, `input/`, `output/`, `prompts/` are all preserved.
+- **Migrating from the portable ZIP**: the wizard's "import previous settings" step copies the API
+  key, translation memory and history in one go.
+- The portable ZIP is still published; neither build ships an API key (`.env` is a blank template).
+
+### 6. UI & usability
+
+- **Modern Windows 11 (Sun Valley) theme** with system / light / dark switching (`GUI_THEME`).
+- **History window**: review every run (time / files / result / mode / output path - open the output
+  folder, export CSV, delete) plus the translation memory (source / translation / model / time -
+  search, view, export, delete, clear). Keeps the last 200 runs by default (`HISTORY_KEEP`).
+- **Output name conflict check** before translating: overwrite / rename (add a number) / cancel.
+- **Inputs are archived** into `<input>/translated/` after a successful run so they are not re-read
+  next time (can be turned off).
+- New "open output folder" button; all new UI text is localised in Chinese / English / Korean.
+
+### 7. Stability & fixes
+
+- A corrupted translation-cache file is backed up and rebuilt automatically (the run re-translates
+  instead of failing).
+- Installer wizard: the "import previous settings" path box is now linked to its checkbox - you can
+  only type or browse after ticking it.
+- All four guides and the READMEs are updated for this release in all three languages.
 
 ## 1. What Is This & What It Does
 
