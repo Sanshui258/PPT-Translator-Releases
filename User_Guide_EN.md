@@ -1,4 +1,4 @@
-# PPT Translator User Guide (Official v1.2.0)
+# PPT Translator User Guide (Official v1.5.0)
 
 > Welcome to the **first official release of PPT Translator** — a local PPT / PDF AI translation tool.
 > It reads PPTX / PPT / PDF files, translates text (e.g. Korean / English) into Simplified Chinese (target language is configurable),
@@ -12,7 +12,44 @@
 
 ---
 
-## What's new: everything since v1.1.1 (v1.2.0, October release)
+## What's new: everything since v1.2.0 (v1.5.0, mid-October release)
+
+### 1. Word / Hangul document translation (the big one)
+
+- **A whole new document pipeline:** `.docx` / `.hwpx` are rewritten directly in pure Python — **no office suite required**; `.doc` / `.hwp` are converted by your local Word / Hangul, edited, then converted back.
+- **Output format matches the input:** `.doc` in, `.doc` out; `.hwp` in, `.hwp` out. Nothing is force-converted to PPTX.
+- **In-place replacement, no layout work:** translations go back into the original paragraphs; table styles, images, headers/footers and formulas stay untouched.
+- **Optional image reading:** by default each image inside a document gets one multimodal call and the translation is inserted as a new paragraph after it — switchable in the UI.
+- **Its own font-size policy:** the original size is kept by default, optionally unified or scaled to 7/16.
+
+### 2. Brand-new interface (PySide6)
+
+- Rebuilt on **PySide6 with a flat MaterialDark theme**: two-column layout, light/dark themes, every arrow icon drawn in code with zero bitmap assets.
+- Drag & drop, progress and status, model list / connection test, history and the built-in guide all kept and re-arranged.
+- Falls back to the previous Tkinter UI automatically if PySide6 is missing — it always opens.
+
+### 3. Speed and stability
+
+- **Parallel scheduling:** page-level and batch-level concurrency, stitched back in order — noticeably faster in vision mode and on large files.
+- **HTTP 413 fixed:** oversized images are scaled and re-encoded before upload (common with phone photos and big screenshots).
+- **Fixed a Hangul bug** where inserting text near an image cloned the whole table (1 table became 12; 50 paragraphs became 597).
+- Filled in the missing stop / memory-release, split-failure and context-overflow safeguards.
+
+### 4. Tables & layout (accumulated since v1.2.0)
+
+- Tables are translated cell by cell and written back in place — borders, shading and merged cells unchanged.
+- Two-stage background estimation, coordinate-norm placement and reading-order layout: translations no longer pile up at the bottom of the page.
+
+### 5. UI & distribution (accumulated since v1.2.0)
+
+- Upgrades never overwrite `.env` / `cache/` / `reports/` / `logs/` / `input/` / `output/` / `prompts/`.
+- History window (task log + translation memory; search, export, delete).
+- Output-name conflict check (overwrite / rename / cancel) and automatic archiving of inputs into `translated/`.
+- UI in Chinese / English / Korean, including progress, status and errors.
+
+---
+
+## What's new: everything since v1.1.1 (v1.2.0, October release — historical)
 
 ### 1. Table translation (the big one)
 
@@ -101,8 +138,9 @@
 
 In one line: it automates the annoying work of "reading text from images" and "copy-pasting text into a translator".
 
-- **Inputs:** `.pptx` / `.ppt` / `.pdf` (Word, Excel, and other files are skipped automatically — a deliberate whitelist design).
+- **Inputs:** `.pptx` / `.ppt` / `.pdf`, plus Word / Hangul documents `.docx` / `.doc` / `.hwpx` / `.hwp` (Excel and other spreadsheet files are skipped automatically — a deliberate whitelist design).
 - **Translation:** it prefers to read the **editable text** inside a PPT directly; for image-based slides or scanned PDFs it automatically switches to **vision-based extraction**.
+- **Documents keep their own format:** Word / Hangul documents skip the layout pipeline entirely — translations replace the original paragraphs in place, leaving tables, images, headers and footers untouched. **Output format matches the input format** (`.hwp` in, `.hwp` out; `.doc` in, `.doc` out). Legacy `.doc` / `.hwp` require Word / Hangul installed on this machine.
 - **Layout:** translations are placed near the original text (below → above → nearby blank space → a larger empty area of the page), avoiding overlap with the original, with font size auto-fitted so text stays readable.
 - **Proofreading:** after translation, the AI checks the result against the original and auto-fixes omissions / truncation / errors, then re-lays-out if needed.
 - **Large files:** context usage is tracked and batches are auto-compacted; decks over ~50 pages or a very large estimated token count are split into 2 parts, translated, then merged.
@@ -214,6 +252,29 @@ When the page count exceeds `SPLIT_MAX_PAGES` (default 50) or the estimated toke
 - Translated items are cached locally (`cache/`) so re-processing does not re-bill you; tick **Force re-translate** to ignore the cache.
 - Output: `output/filename_zh.pptx`; reports in `reports/`; logs in `logs/`.
 
+### 5.9 Word / Hangul documents (in-place, no layout)
+
+**Formats**
+
+- `.docx` (Word) and `.hwpx` (Hangul): rewritten directly in pure Python — **no office suite needed**.
+- `.doc` (legacy Word) and `.hwp` (legacy Hangul): binary legacy formats that need Word / Hangul installed. The tool converts them to `.docx` / `.hwpx`, edits them, then converts them back.
+
+**Output format matches the input:** `.doc` in, `.doc` out; `.hwp` in, `.hwp` out — never force-converted to PPTX or anything else. If the final conversion back fails, the file is kept in the intermediate format (`.docx` / `.hwpx`) and flagged as a warning in the report rather than reported as a success.
+
+**How it edits:** the document pipeline does **no layout work at all**. Translations replace the original paragraphs **in place** — position, numbering and styling stay where they were; table styles, images, headers, footers and formulas are untouched. The Hybrid / Vision switch does not apply to documents: their text always goes through the text pipeline.
+
+**Images inside documents:** by default each image gets one multimodal call to read the text in it, and the translation is inserted as a new paragraph after the image. To save time or API cost, uncheck "Also read text inside document images" in the **Word / Hangul documents** box (`.env`: `DOC_IMAGE_VISION=0`).
+
+**Font size:** PPT creates new text boxes, so a uniform size makes sense; documents are edited in place, where rewriting every size looks jarring — so the **original size is kept by default**. To unify it, pick **Fixed size** or **Original x 7/16** under *Document size* (`.env`: `DOC_FONT_SIZE_MODE=keep / fixed / ratio`). Font, colour and highlight still follow the global **translation font & style** settings.
+
+**Self-check:** the finished file is reopened to confirm the paragraph count, image count and that the translations actually landed; results go to `reports/`.
+
+**Known limits**
+
+- Legacy `.doc` / `.hwp` need Word / Hangul installed; without them that step fails with a clear message and other files are unaffected.
+- Text boxes, SmartArt and formulas are left alone.
+- Because nothing is re-laid-out, a much longer translation will stretch its paragraph — that is normal for in-place replacement.
+
 ---
 
 ## 6. Troubleshooting (quick reference)
@@ -228,7 +289,8 @@ When the page count exceeds `SPLIT_MAX_PAGES` (default 50) or the estimated toke
 | Large-file split fails (PowerPoint Clipboard error) | Splitting needs PowerPoint locally: install/update Office and retry, or translate in segments with a page range. |
 | Translations pile up in a corner / look cramped | Increase `.env` `LAYOUT_NEAR_BLOCK_RADIUS` and `LAYOUT_MIN_BLOCK_RATIO` (e.g. 0.2), and set `LAYOUT_BLOCK_ORIGIN` to `top-right`. |
 | Wrong UI language | Change it in the top-right language dropdown — no restart needed. |
-
+| Word / Hangul document asks for Word / Hangul | Only legacy `.doc` / `.hwp` need the corresponding program installed to convert; `.docx` / `.hwpx` work without it. |
+| Document translation stretched the layout | Documents are replaced in place with no re-layout, so a longer translation naturally stretches its paragraph. Switch *Document size* back to **Keep original** to compare. |
 > Still stuck? Post the **error line from the status window** or the newest content of `logs/` to
 > **https://github.com/Sanshui258/PPT-Translator-Releases/issues**, including the mode, the Base URL (mask your key) and the page count.
 
